@@ -9,12 +9,14 @@ Installing
 создание вертуал окруж и актевируйте его, потом выполните:
 
 ..code-block:: text
+
     pip install -r requirements.txt
 
 Положите картинки с котивами в папку images. Название файлов должно начинаться с cat, а заканчиваться.jpg
 
 Настройки
 ---------
+
 Создайте файл settings.py и добавте след настройки:
 
 .. code-block:: python
@@ -27,6 +29,8 @@ Installing
 ------
 
 В активированном верт окружении выполнить:
+
 ..code-block:: text
+
     python3 bot.py
  
