@@ -16,13 +16,7 @@ def greet_user(update, context):
     emo = get_user_emo(context.user_data)
     context.user_data['emo'] = emo
     user_text = f'Привет {emo}'
-    contact_button = KeyboardButton('Контактные данные', request_contact=True)
-    location_button = KeyboardButton('Геолокация', request_location=True)
-    my_keyboard = ReplyKeyboardMarkup([
-                                        ['Прислать котика', 'Сменить аватар'],
-                                        [contact_button, location_button]
-                                        ],
-                                         True)
+    
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=user_text, reply_markup=my_keyboard)
 
@@ -45,12 +39,12 @@ def chenge_avatar(update, context):
     emo = get_user_emo(context.user_data)
     context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
 
-
 def get_user_emo(user_data):
     if 'emo' in user_data:
         return user_data['emo']
     else:
         return emojize(choice(settings.USER_EMOJI), use_aliases=True)
+
 
 def get_contact(update, context):
     emo = get_user_emo(context.user_data)
@@ -62,7 +56,14 @@ def get_location(update, context):
     print(update.message.location)
     context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
 
-
+def get_keyboard():
+    contact_button = KeyboardButton('Контактные данные', request_contact=True)
+    location_button = KeyboardButton('Геолокация', request_location=True)
+    my_keyboard = ReplyKeyboardMarkup([
+                                        ['Прислать котика', 'Сменить аватар'],
+                                        [contact_button, location_button]
+                                        ],
+                                         True)
 
 def main():
     mybot = Updater(settings.API_KEY, use_context=True)
@@ -80,4 +81,5 @@ def main():
     mybot.start_polling() # ходи в телегу слушай сообщения
     mybot.idle # Работай пока не остоновят принудительно
 
-main()
+if __name__ == "__main__":
+    main()
