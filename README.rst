@@ -8,7 +8,7 @@ Installing
 
 создание вертуал окруж и актевируйте его, потом выполните:
 
-..code-block:: text
+.. code-block:: text
 
     pip install -r requirements.txt
 
@@ -30,7 +30,7 @@ Installing
 
 В активированном верт окружении выполнить:
 
-..code-block:: text
+.. code-block:: text
 
     python3 bot.py
  
