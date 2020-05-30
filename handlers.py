@@ -1,56 +1,70 @@
 from glob import glob
+import logging
 import os
 from random import choice
-import logging
 
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, ParseMode
+
+from emoji import emojize
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, ParseMode, error, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 from telegram.ext import messagequeue as mq
 
 from bot import subscribers
-from db import db, get_or_create_user
-from utils import get_user_emo, get_keyboard, is_cat
+from db import db, get_or_create_user, get_user_emo, toggle_subscription, get_subscribers
+from utils import get_keyboard, is_cat
 
 
 def greet_user(update, context):
     #print(update.message.chat_id)
-    context.user_data = get_or_create_user(db, update.effective_user, update.message)
-    #print(user)
-    emo = get_user_emo(context.user_data)
+    user = get_or_create_user(db, update.effective_user, update.message)
+    emo = get_user_emo(user)
     context.user_data['emo'] = emo
     user_text = f'Привет {emo}'
     context.bot.send_message(chat_id=update.effective_chat.id, text=user_text, reply_markup=get_keyboard())
 
 
 def talk_to_me(update, context):
-    emo = get_user_emo(context.user_data)
-    user_text = f'Привет {update.message.chat.first_name} {emo} Ты написал: {update.message.text}'
-    logging.info("User: %s, Chat id: %s, Message: %s", update.message.chat.first_name, update.message.chat.id, update.message.text)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=user_text)
+    user = get_or_create_user(db, update.effective_user, update.message)
+    emo = get_user_emo(user)
+    user_text = f'Привет {user["first_name"]} {emo} Ты написал: {update.message.text}'
+    logging.info("User: %s, Chat id: %s, Message: %s", user['username'], update.message.chat.id, update.message.text)
+    update.message.reply_text(user_text, reply_markup=get_keyboard())
+    #context.bot.send_message(chat_id=update.effective_chat.id, text=user_text)
 
 
 def send_cat_picture(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     cat_list = glob('images/cat*.jp*g')
     cat_pic = choice(cat_list)
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=open(cat_pic, 'rb'))
+    inlinekbd = [[InlineKeyboardButton(emojize(':thumbs_up:'), callback_data='cat_good'),
+                    InlineKeyboardButton(emojize(':thumbs_down:'), callback_data='cat_bad')]]
+
+    kbd_markup = InlineKeyboardMarkup(inlinekbd)
+    context.bot.send_photo(chat_id=update.effective_chat.id, photo=open(cat_pic, 'rb'), reply_markup=kbd_markup)
 
 def chenge_avatar(update, context):
-    if 'emo' in context.user_data:
-        del context.user_data['emo']
-    emo = get_user_emo(context.user_data)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
+    user = get_or_create_user(db, update.effective_user, update.message)
+    
+    if 'emo' in user:
+        del user['emo']
+    emo = get_user_emo(user)
+    update.message.reply_text(f'Готово {emo}', reply_markup=get_keyboard())
+    #context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
 
 def get_contact(update, context):
-    emo = get_user_emo(context.user_data)
+    user = get_or_create_user(db, update.effective_user, update.message)
     print(update.message.contact)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
+    update.message.reply_text(f'Готово {get_user_emo(user)}', reply_markup=get_keyboard())
+    #context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
 
 def get_location(update, context):
-    emo = get_user_emo(context.user_data)
+    user = get_or_create_user(db, update.effective_user, update.message)
     print(update.message.location)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
+    update.message.reply_text(f'Готово {get_user_emo(user)}', reply_markup=get_keyboard())
+    #context.bot.send_message(chat_id=update.effective_chat.id, text=f'Готово {emo}')
 
 def check_user_photo(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     context.bot.send_message(chat_id=update.effective_chat.id, text=f'Обрабатываю фото')
     os.makedirs('downloads', exist_ok=True)
     photo_file = context.bot.getFile(update.message.photo[-1].file_id)
@@ -66,10 +80,12 @@ def check_user_photo(update, context):
         os.remove(filename)
 
 def anketa_start(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     context.bot.send_message(chat_id=update.effective_chat.id, text='Как вас зовут? Напишите имя и Фамилию', reply_markup=ReplyKeyboardRemove())
     return "name"
 
 def anketa_get_name(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     user_name = update.message.text
     if len(user_name.split(" ")) != 2:
         #update.message.reply_text("Ты пиздишь")
@@ -85,12 +101,14 @@ def anketa_get_name(update, context):
         return "rating"
 
 def anketa_rating(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     context.user_data['anketa_rating'] = update.message.text
     update.message.reply_text("""Пожалуйста напишите отзыв в свободной форме 
 или /cancel чтобы пропустить этот шаг""")
     return "comment"
 
 def anketa_comment(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     context.user_data["anketa_comment"] = update.message.text
     user_text = """
 <b>Имя Фамилия:</b> {anketa_name}
@@ -102,6 +120,7 @@ def anketa_comment(update, context):
     return ConversationHandler.END
 
 def anketa_skip_comment(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     user_text = """
 <b>Имя Фамилия:</b> {anketa_name}
 <b>Оценка</b> {anketa_rating}""".format(**context.user_data)
@@ -111,20 +130,36 @@ def anketa_skip_comment(update, context):
     return ConversationHandler.END
 
 def dontknow(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message)
     update.message.reply_text("Не понимаю")
 
 def subscribe (update, context):
-    subscribers.add(update.message.chat_id)
+    user = get_or_create_user(db, update.effective_user, update.message)
+    if not user.get('subscribed'):
+        toggle_subscription(db, user)
+    #subscribers.add(update.message.chat_id)
     update.message.reply_text('Вы подписались')
 
-def send_updates(context):
-    for chat_id in subscribers:
-        context.bot.sendMessage(chat_id=chat_id, text="Buzzi")
+def inline_button_pressed(update, context):
+    query = update.callback_query
+    if query.data in ['cat_good', 'cat_bad']:
+        text = "Круто!" if query.data == 'cat_good' else "Печаль"
+    
+        context.bot.edit_message_caption(caption=text, chat_id=query.message.chat.id, message_id=query.message.message_id)
 
 #@mq.queuedmessage
+def send_updates(context):
+    for user in get_subscribers(db):
+        try:
+            context.bot.sendMessage(chat_id=user['chat_id'], text="Buzzi")
+        except error.BadRequest:
+            print('Kasachok')
+
+
 def unsubscribe (update, context):
-    if update.message.chat_id in subscribers:
-        subscribers.remove(update.message.chat_id)
+    user = get_or_create_user(db, update.effective_user, update.message)
+    if user.get('subscribed'):
+        toggle_subscription(db, user)
         update.message.reply_text('Вы отписались')
     else:
         update.message.reply_text("Вы не подписаны, нажмите /subscribe чтобы подписаться")

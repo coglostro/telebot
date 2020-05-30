@@ -1,16 +1,8 @@
-from random import choice
-
 from clarifai.rest import ClarifaiApp
-from emoji import emojize
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 import settings
 
-def get_user_emo(user_data):
-    if 'emo' in user_data:
-        return user_data['emo']
-    else:
-        return emojize(choice(settings.USER_EMOJI), use_aliases=True)
 
 def get_keyboard():
     contact_button = KeyboardButton('Контактные данные', request_contact=True)
