@@ -36,11 +36,7 @@ def send_cat_picture(update, context):
     user = get_or_create_user(db, update.effective_user, update.message)
     cat_list = glob('images/cat*.jp*g')
     cat_pic = choice(cat_list)
-    inlinekbd = [[InlineKeyboardButton(emojize(':thumbs_up:'), callback_data='cat_good'),
-                    InlineKeyboardButton(emojize(':thumbs_down:'), callback_data='cat_bad')]]
-
-    kbd_markup = InlineKeyboardMarkup(inlinekbd)
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=open(cat_pic, 'rb'), reply_markup=kbd_markup)
+    context.bot.send_photo(chat_id=update.effective_chat.id, photo=open(cat_pic, 'rb'), reply_markup=get_keyboard())
 
 def chenge_avatar(update, context):
     user = get_or_create_user(db, update.effective_user, update.message)
@@ -140,12 +136,30 @@ def subscribe (update, context):
     #subscribers.add(update.message.chat_id)
     update.message.reply_text('Вы подписались')
 
+def show_inline(update, context):
+    inlinekbd = [[InlineKeyboardButton('Смешно', callback_data='1'),
+                    InlineKeyboardButton('Не смешно', callback_data='0')]]
+    
+    kbd_markup = InlineKeyboardMarkup(inlinekbd)
+    update.message.reply_text('Заходят в бар бесконечное количество математиков', reply_markup=kbd_markup)
+    
 def inline_button_pressed(update, context):
     query = update.callback_query
-    if query.data in ['cat_good', 'cat_bad']:
-        text = "Круто!" if query.data == 'cat_good' else "Печаль"
+    try:
+        user_choice = int(query.data)
+        text = ":-)" if user_choice > 0 else ":-("
+    except TypeError:
+        text = 'что то пощло не так'
+    context.bot.edit_message_text(text=text, chat_id=query.message.chat.id, message_id=query.message.message_id)
     
-        context.bot.edit_message_caption(caption=text, chat_id=query.message.chat.id, message_id=query.message.message_id)
+# Для ветки master
+#
+# def inline_button_pressed(update, context):
+#     query = update.callback_query
+#     if query.data in ['cat_good', 'cat_bad']:
+#         text = "Круто!" if query.data == 'cat_good' else "Печаль"
+    
+#         context.bot.edit_message_caption(caption=text, chat_id=query.message.chat.id, message_id=query.message.message_id)
 
 #@mq.queuedmessage
 def send_updates(context):
